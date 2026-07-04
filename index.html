@@ -899,30 +899,15 @@ async function submitAssessment() {
   `;
 
   try {
-    // ── STEP 1: Generate plan via secure Netlify Function ────────────────────
-    const genRes = await fetch("/.netlify/functions/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answers })
-    });
+    // AI plan generation disabled for now — Chris will build the programme
+    // manually from the assessment answers emailed below.
+    generatedPlan = "";
+    coachNotes    = "";
 
-    if (!genRes.ok) {
-      const errBody = await genRes.json().catch(()=>({}));
-      throw new Error(errBody.error || "Plan generation failed (status " + genRes.status + ")");
-    }
-
-    const genData = await genRes.json();
-    if (!genData.success) {
-      throw new Error(genData.error || "Plan generation failed");
-    }
-
-    generatedPlan = genData.clientPlan;
-    coachNotes    = genData.coachNotes;
-
-    // ── STEP 2: Send email via EmailJS ───────────────────────────────────────
+    // ── STEP 1: Send email via EmailJS ───────────────────────────────────────
     await sendEmailToChris();
 
-    // ── STEP 3: Show thank you ────────────────────────────────────────────────
+    // ── STEP 2: Show thank you ────────────────────────────────────────────────
     showThankYou();
 
   } catch(err) {
@@ -994,23 +979,18 @@ async function sendEmailToChris() {
     ["Motivation",  answers.motivation],
   ].map(([k,v])=>`${k}: ${v||"—"}`).join("\n");
 
-  try {
-    await window.emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      to_email:       "cneethling07@gmail.com",
-      subject:        "🏋️ NEW CLIENT PROGRAMME — "+answers.name+" | "+(answers.selectedPackage||"Package TBC"),
-      client_name:    answers.name || "Unknown",
-      client_phone:   answers.phone || "Not provided",
-      client_age:     answers.age || "—",
-      client_goal:    answers.primary || "—",
-      wa_client_link: waClientLink,
-      assessment:     assessSummary,
-      client_plan:    generatedPlan,
-      coach_notes:    coachNotes || "No specific flags.",
-    });
-  } catch(e) {
-    // Email failed — not critical, plan still generated
-    console.warn("EmailJS failed:", e);
-  }
+  await window.emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+    to_email:       "cneethling07@gmail.com",
+    subject:        "🏋️ NEW CLIENT PROGRAMME — "+answers.name+" | "+(answers.selectedPackage||"Package TBC"),
+    client_name:    answers.name || "Unknown",
+    client_phone:   answers.phone || "Not provided",
+    client_age:     answers.age || "—",
+    client_goal:    answers.primary || "—",
+    wa_client_link: waClientLink,
+    assessment:     assessSummary,
+    client_plan:    generatedPlan || "Not auto-generated — Chris will put this together manually.",
+    coach_notes:    coachNotes || "No specific flags.",
+  });
 }
 
 // ── THANK YOU SCREEN ──────────────────────────────────────────────────────────
